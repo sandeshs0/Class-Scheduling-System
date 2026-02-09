@@ -13,7 +13,6 @@ import { createClassSchema, updateClassSchema } from '../validators/classValidat
 
 const router = Router();
 
-// Calendar must come before :id route
 router.get('/calendar', getCalendar);
 
 router.route('/')

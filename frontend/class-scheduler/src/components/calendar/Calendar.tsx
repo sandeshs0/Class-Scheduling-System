@@ -18,16 +18,15 @@ const localizer = dateFnsLocalizer({
     locales,
 });
 
-// Modern color palette
 const EVENT_COLORS = [
-    '#4f46e5', // Indigo 600
-    '#059669', // Emerald 600
-    '#d97706', // Amber 600
-    '#db2777', // Pink 600
-    '#7c3aed', // Violet 600
-    '#0891b2', // Cyan 600
-    '#ea580c', // Orange 600
-    '#dc2626', // Red 600
+    '#4f46e5', 
+    '#059669', 
+    '#d97706', 
+    '#db2777', 
+    '#7c3aed', 
+    '#0891b2', 
+    '#ea580c', 
+    '#dc2626', 
 ];
 
 const getEventColor = (id: string) => {
@@ -50,7 +49,6 @@ interface CalendarProps {
     toolbar?: boolean;
 }
 
-// Custom Toolbar Component
 const CustomToolbar = (toolbar: ToolbarProps) => {
     const goToBack = () => {
         toolbar.onNavigate('PREV');
@@ -125,7 +123,6 @@ const CustomToolbar = (toolbar: ToolbarProps) => {
     );
 };
 
-// Custom Event Component
 const CustomEvent = ({ event }: any) => {
     return (
         <div className="h-full flex flex-col leading-tight overflow-hidden">
@@ -150,7 +147,6 @@ export default function Calendar({
     onView,
     toolbar = true
 }: CalendarProps) {
-    // Transform instances to calendar events
     const calendarEvents = useMemo(() => {
         return events.map(instance => {
             const start = new Date(`${instance.date.split('T')[0]}T${instance.startTime}`);
@@ -208,7 +204,6 @@ export default function Calendar({
                 popup
                 eventPropGetter={(event) => {
                     const resource = (event as any).resource;
-                    // Color based on room type ID if available, else instructor, else default
                     const colorId = resource?.roomType?._id || resource?.instructor?._id || 'default';
                     const backgroundColor = getEventColor(colorId);
 

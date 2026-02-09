@@ -15,13 +15,11 @@ export default function Instructors() {
     const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Form state
     const [formData, setFormData] = useState<CreateInstructorDTO>({
         name: '',
         role: '',
     });
 
-    // Fetch instructors
     const fetchInstructors = async () => {
         try {
             setIsLoading(true);
@@ -39,7 +37,6 @@ export default function Instructors() {
         fetchInstructors();
     }, []);
 
-    // Open modal for create/edit
     const openModal = (instructor?: Instructor) => {
         if (instructor) {
             setEditingInstructor(instructor);
@@ -54,7 +51,6 @@ export default function Instructors() {
         setIsModalOpen(true);
     };
 
-    // Handle form submit
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -77,7 +73,6 @@ export default function Instructors() {
         }
     };
 
-    // Handle delete
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this instructor?')) return;
 
@@ -91,7 +86,6 @@ export default function Instructors() {
         }
     };
 
-    // Generate avatar color from name
     const getAvatarColor = (name: string) => {
         const colors = [
             'bg-indigo-500',
@@ -119,7 +113,6 @@ export default function Instructors() {
                 }
             />
 
-            {/* Instructors Table */}
             {isLoading ? (
                 <div className="bg-white rounded-2xl overflow-hidden">
                     {[...Array(5)].map((_, i) => (
@@ -206,7 +199,6 @@ export default function Instructors() {
                 </div>
             )}
 
-            {/* Create/Edit Modal */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}

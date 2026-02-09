@@ -1,4 +1,3 @@
-// Room Type
 export interface RoomType {
     _id: string;
     name: string;
@@ -15,7 +14,6 @@ export interface CreateRoomTypeDTO {
     capacity: number;
 }
 
-// Instructor
 export interface Instructor {
     _id: string;
     name: string;
@@ -30,20 +28,17 @@ export interface CreateInstructorDTO {
     role: string;
 }
 
-// Time Slot
 export interface TimeSlot {
-    startTime: string; // HH:mm format
-    endTime: string; // HH:mm format
+    startTime: string;
+    endTime: string;
 }
-
-// Recurrence Pattern
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
 
 export interface RecurrencePattern {
     type: RecurrenceType;
     timeSlots: TimeSlot[];
-    weekDays?: number[]; // 0-6 (Sun-Sat)
-    monthDays?: number[]; // 1-31
+    weekDays?: number[];
+    monthDays?: number[];
     customPattern?: {
         weekDays?: number[];
         interval?: number;
@@ -53,7 +48,6 @@ export interface RecurrencePattern {
     occurrences: number;
 }
 
-// Class
 export interface Class {
     _id: string;
     title: string;
@@ -62,7 +56,7 @@ export interface Class {
     roomType: RoomType | string;
     isRecurring: boolean;
     recurrence?: RecurrencePattern;
-    scheduledDate?: string; // For one-time classes
+    scheduledDate?: string;
     startTime?: string;
     endTime?: string;
     isActive: boolean;
@@ -82,7 +76,6 @@ export interface CreateClassDTO {
     endTime?: string;
 }
 
-// Class Instance (individual occurrences)
 export interface ClassInstance {
     _id: string;
     class: Class | string;
@@ -96,7 +89,6 @@ export interface ClassInstance {
     updatedAt: string;
 }
 
-// API Response types
 export interface ApiResponse<T> {
     success: boolean;
     data: T;

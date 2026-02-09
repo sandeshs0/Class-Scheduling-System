@@ -17,7 +17,6 @@ export default function ClassList({ instances, onSelectEvent }: ClassListProps) 
         return { label: 'Scheduled', className: 'bg-amber-100 text-amber-700' };
     };
 
-    // Sort by Date and Time
     const sortedInstances = [...instances].sort((a, b) => {
         const dateA = new Date(`${a.date}T${a.startTime}`);
         const dateB = new Date(`${b.date}T${b.startTime}`);

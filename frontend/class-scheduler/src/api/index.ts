@@ -18,7 +18,6 @@ const api = axios.create({
     },
 });
 
-// ============ Room Types ============
 export const roomTypeApi = {
     getAll: async (): Promise<RoomType[]> => {
         const response = await api.get('/room-types');
@@ -45,7 +44,6 @@ export const roomTypeApi = {
     },
 };
 
-// ============ Instructors ============
 export const instructorApi = {
     getAll: async (): Promise<Instructor[]> => {
         const response = await api.get('/instructors');
@@ -72,7 +70,6 @@ export const instructorApi = {
     },
 };
 
-// ============ Classes ============
 export const classApi = {
     getAll: async (): Promise<Class[]> => {
         const response = await api.get('/classes');

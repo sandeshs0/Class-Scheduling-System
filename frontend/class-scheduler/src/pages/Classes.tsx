@@ -40,7 +40,6 @@ export default function Classes() {
     const [editingClass, setEditingClass] = useState<Class | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Form state
     const [formData, setFormData] = useState<CreateClassDTO>({
         title: '',
         description: '',
@@ -62,7 +61,6 @@ export default function Classes() {
         { startTime: '', endTime: '' }
     ]);
 
-    // Get duration label based on recurrence type
     const getDurationLabel = () => {
         switch (recurrenceType) {
             case 'daily': return 'Number of Days';
@@ -73,7 +71,6 @@ export default function Classes() {
         }
     };
 
-    // Fetch data
     const fetchData = async () => {
         try {
             setIsLoading(true);
@@ -97,12 +94,10 @@ export default function Classes() {
         fetchData();
         if (searchParams.get('action') === 'create') {
             openModal();
-            // Clear the param so it doesn't reopen on refresh, but keep it clean
             setSearchParams({});
         }
     }, [searchParams]);
 
-    // Open modal for create/edit
     const openModal = (classItem?: Class) => {
         if (classItem) {
             setEditingClass(classItem);
@@ -183,7 +178,6 @@ export default function Classes() {
             };
 
             if (isRecurring) {
-                // Calculate end date based on recurrence type and duration
                 const startDate = new Date(formData.scheduledDate || '');
                 let endDate = new Date(startDate);
 
@@ -199,7 +193,6 @@ export default function Classes() {
                         endDate.setDate(endDate.getDate() - 1);
                         break;
                     case 'custom':
-                        // occurrences * interval * 7 days
                         endDate.setDate(endDate.getDate() + (recurrenceDuration * customInterval * 7) - 1);
                         break;
                 }
@@ -240,7 +233,6 @@ export default function Classes() {
         }
     };
 
-    // Handle delete
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this class?')) return;
 
@@ -254,7 +246,6 @@ export default function Classes() {
         }
     };
 
-    // Toggle week day selection
     const toggleWeekDay = (day: number) => {
         setSelectedWeekDays((prev) =>
             prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
@@ -283,7 +274,6 @@ export default function Classes() {
         }
     };
 
-    // Get instructor/room type name
     const getInstructorName = (instructor: Instructor | string) => {
         if (typeof instructor === 'string') {
             const found = instructors.find((i) => i._id === instructor);
@@ -313,7 +303,6 @@ export default function Classes() {
                 }
             />
 
-            {/* Classes List */}
             {isLoading ? (
                 <div className="space-y-4">
                     {[...Array(5)].map((_, i) => (
@@ -422,7 +411,6 @@ export default function Classes() {
                 </div>
             )}
 
-            {/* Create/Edit Modal */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}

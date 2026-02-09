@@ -15,14 +15,12 @@ export default function RoomTypes() {
     const [editingRoomType, setEditingRoomType] = useState<RoomType | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Form state
     const [formData, setFormData] = useState<CreateRoomTypeDTO>({
         name: '',
         description: '',
         capacity: 0,
     });
 
-    // Fetch room types
     const fetchRoomTypes = async () => {
         try {
             setIsLoading(true);
@@ -40,7 +38,6 @@ export default function RoomTypes() {
         fetchRoomTypes();
     }, []);
 
-    // Open modal for create/edit
     const openModal = (roomType?: RoomType) => {
         if (roomType) {
             setEditingRoomType(roomType);
@@ -56,7 +53,6 @@ export default function RoomTypes() {
         setIsModalOpen(true);
     };
 
-    // Handle form submit
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -79,7 +75,6 @@ export default function RoomTypes() {
         }
     };
 
-    // Handle delete
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this room type?')) return;
 
@@ -106,7 +101,6 @@ export default function RoomTypes() {
                 }
             />
 
-            {/* Room Types Grid */}
             {isLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[...Array(6)].map((_, i) => (
@@ -183,7 +177,6 @@ export default function RoomTypes() {
                 </div>
             )}
 
-            {/* Create/Edit Modal */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}

@@ -4,13 +4,10 @@ import RoomType from '../models/RoomType';
 import cacheService, { cacheService as CACHE_KEYS } from '../services/cacheService';
 import { createPagination, errorResponse, successResponse } from '../utils/apiResponse';
 
-// @desc    Create a new room type
-// @route   POST /api/room-types
+
 export const createRoomType = asyncHandler(async (req: Request, res: Response) => {
-    // Body is already validated by middleware!
     const { name, description, capacity } = req.body;
 
-    // Check for duplicate name
     const existingRoom = await RoomType.findOne({ name: name.toLowerCase() });
     if (existingRoom) {
         return errorResponse(res, 400, 'Duplicate Error', 'Room type with this name already exists');
@@ -18,20 +15,16 @@ export const createRoomType = asyncHandler(async (req: Request, res: Response) =
 
     const roomType = await RoomType.create({ name, description, capacity });
 
-    // Invalidate cache
     await cacheService.invalidateRoomTypes();
 
     return successResponse(res, 201, 'Room Type Created', 'Room type has been created successfully', roomType);
 });
 
-// @desc    Get all room types
-// @route   GET /api/room-types
 export const getAllRoomTypes = asyncHandler(async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    // Try cache first
     const cacheKey = `${CACHE_KEYS.ROOM_TYPES_ALL}:${page}:${limit}`;
     const cached = await cacheService.get<any>(cacheKey);
     if (cached) {
@@ -47,14 +40,12 @@ export const getAllRoomTypes = asyncHandler(async (req: Request, res: Response) 
 
     const pagination = createPagination(total, page, limit);
 
-    // Cache the result
     await cacheService.set(cacheKey, { data: roomTypes, pagination });
 
     return successResponse(res, 200, 'Room Types Fetched', 'Room types loaded successfully', roomTypes, pagination);
 });
 
-// @desc    Get single room type
-// @route   GET /api/room-types/:id
+
 export const getRoomTypeById = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
@@ -75,8 +66,7 @@ export const getRoomTypeById = asyncHandler(async (req: Request, res: Response) 
     return successResponse(res, 200, 'Room Type Fetched', 'Room type loaded successfully', roomType);
 });
 
-// @desc    Update room type
-// @route   PUT /api/room-types/:id
+
 export const updateRoomType = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const { name, description, capacity } = req.body;
@@ -87,7 +77,6 @@ export const updateRoomType = asyncHandler(async (req: Request, res: Response) =
         return errorResponse(res, 404, 'Not Found', 'Room type not found');
     }
 
-    // Check for duplicate name
     if (name && name.toLowerCase() !== roomType.name) {
         const existing = await RoomType.findOne({ name: name.toLowerCase(), _id: { $ne: id } });
         if (existing) {

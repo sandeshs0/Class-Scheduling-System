@@ -23,7 +23,6 @@ export default function Modal({
     children,
     size = 'md',
 }: ModalProps) {
-    // Handle ESC key
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
@@ -44,13 +43,11 @@ export default function Modal({
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-            {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
                 onClick={onClose}
             />
 
-            {/* Modal */}
             <div className="flex min-h-full items-center justify-center p-4">
                 <div
                     className={`
@@ -60,7 +57,6 @@ export default function Modal({
           `}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
                         <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
                         <button
@@ -71,7 +67,6 @@ export default function Modal({
                         </button>
                     </div>
 
-                    {/* Content */}
                     <div className="px-6 py-4">{children}</div>
                 </div>
             </div>

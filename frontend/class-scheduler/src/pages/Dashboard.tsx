@@ -21,13 +21,11 @@ export default function Dashboard() {
     const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
     const [selectedEvent, setSelectedEvent] = useState<ClassInstance | null>(null);
 
-    // Fetch calendar data
     const fetchCalendarData = async (date: Date, currentView: View) => {
         try {
             setIsLoading(true);
             let start: Date, end: Date;
 
-            // Determine range based on view
             if (currentView === Views.MONTH) {
                 start = startOfWeek(startOfMonth(date));
                 end = endOfWeek(endOfMonth(date));
@@ -35,8 +33,7 @@ export default function Dashboard() {
                 start = startOfWeek(date);
                 end = endOfWeek(date);
             } else {
-                // Day or Agenda
-                start = startOfWeek(date); // Fetch week context usually safe
+                start = startOfWeek(date); 
                 end = endOfWeek(date);
             }
 
@@ -57,7 +54,6 @@ export default function Dashboard() {
     }, [currentDate, view]);
 
     const handleRangeChange = (_range: Date[] | { start: Date; end: Date }) => {
-        // Handled by useEffect on date/view change
     };
 
     const handleCalendarNavigate = (newDate: Date) => {
@@ -106,7 +102,6 @@ export default function Dashboard() {
             />
 
             <div className="flex flex-col gap-4">
-                {/* View Mode Toggle */}
                 <div className="flex bg-slate-100 p-1 rounded-lg w-fit border border-slate-200">
                     <button
                         onClick={() => setViewMode('calendar')}
@@ -136,7 +131,6 @@ export default function Dashboard() {
                     </button>
                 </div>
 
-                {/* Shared Toolbar */}
                 <ScheduleToolbar
                     date={currentDate}
                     view={view}
@@ -173,7 +167,6 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Event Details Modal */}
             <Modal
                 isOpen={!!selectedEvent}
                 onClose={() => setSelectedEvent(null)}

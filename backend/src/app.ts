@@ -13,7 +13,6 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
 app.use(cors({
     origin:process.env.FRONTEND_URL,
     credentials:true,
@@ -27,7 +26,6 @@ app.get('/', (req, res) => {
     res.send('Class Scheduling System APIs!');
 });
 
-// Routes
 app.use('/api/room-types', roomTypeRoutes);
 app.use('/api/instructors', instructorRoutes);
 app.use('/api/classes', classRoutes);

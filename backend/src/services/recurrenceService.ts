@@ -6,12 +6,10 @@ import { RecurrencePattern } from '../types/recurrence.types';
 class RecurrenceService {
 
     async generateInstances(classDoc: IClass): Promise<IClassInstance[]> {
-        // single instance for one time classs
         if (!classDoc.isRecurring) {
             return this.createSingleInstance(classDoc);
         }
 
-        // for recurring classes
         const dates = this.generateDates(classDoc.recurrence!);
         return this.createInstancesForDates(classDoc, dates);
     }
@@ -151,7 +149,7 @@ class RecurrenceService {
         if (!customPattern || !customPattern.weekDays || customPattern.weekDays.length === 0) return dates;
 
         const weekDays = customPattern.weekDays;
-        const interval = customPattern.interval || 1; // Every N weeks
+        const interval = customPattern.interval || 1; 
 
         let current = new Date(start);
         let weekStart = this.getWeekStart(current);
@@ -167,11 +165,9 @@ class RecurrenceService {
 
             current = this.addDays(current, 1);
 
-            // If we've completed a week, check if we need to skip weeks
             const currentWeekStart = this.getWeekStart(current);
             if (currentWeekStart.getTime() !== weekStart.getTime()) {
                 if (interval > 1) {
-                    // Skip (interval - 1) weeks
                     current = this.addDays(current, 7 * (interval - 1));
                 }
                 weekStart = this.getWeekStart(current);
@@ -181,24 +177,16 @@ class RecurrenceService {
         return dates;
     }
 
-    /**
-     * Delete all instances for a class
-     * Called before regenerating or when class is deleted
-     */
     async deleteInstancesForClass(classId: mongoose.Types.ObjectId | string): Promise<void> {
         await ClassInstance.deleteMany({ class: new mongoose.Types.ObjectId(classId.toString()) });
     }
 
-    /**
-     * Regenerate all instances for a class
-     * Called when recurrence pattern is updated
-     */
+   
     async regenerateInstances(classDoc: IClass): Promise<IClassInstance[]> {
         await this.deleteInstancesForClass(classDoc._id as mongoose.Types.ObjectId);
         return this.generateInstances(classDoc);
     }
 
-    // ===== Helper functions =====
 
     private addDays(date: Date, days: number): Date {
         const result = new Date(date);

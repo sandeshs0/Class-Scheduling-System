@@ -16,19 +16,16 @@ export const createClass = asyncHandler(async (req: Request, res: Response) => {
         isRecurring, recurrence, scheduledDate, startTime, endTime
     } = req.body;
 
-    // Verify instructor exists
     const instructorDoc = await Instructor.findById(instructor);
     if (!instructorDoc || !instructorDoc.isActive) {
         return errorResponse(res, 400, 'Invalid Instructor', 'Instructor not found');
     }
 
-    // Verify room type exists
     const roomTypeDoc = await RoomType.findById(roomType);
     if (!roomTypeDoc || !roomTypeDoc.isActive) {
         return errorResponse(res, 400, 'Invalid Room Type', 'Room type not found');
     }
 
-    // Create the class
     const classData: any = {
         title,
         description,
@@ -38,7 +35,6 @@ export const createClass = asyncHandler(async (req: Request, res: Response) => {
     };
 
     if (isRecurring) {
-        // Transform dates in recurrence
         classData.recurrence = {
             ...recurrence,
             startDate: new Date(recurrence.startDate),
@@ -52,10 +48,8 @@ export const createClass = asyncHandler(async (req: Request, res: Response) => {
 
     const newClass = await Class.create(classData);
 
-    // Generate instances
     const instances = await recurrenceService.generateInstances(newClass);
 
-    // Invalidate cache
     await cacheService.invalidateClasses();
     await cacheService.invalidateCalendar();
 
@@ -74,7 +68,6 @@ export const getAllClasses = asyncHandler(async (req: Request, res: Response) =>
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    // Try cache
     const cacheKey = `${CACHE_KEYS.CLASSES_ALL}:${page}:${limit}`;
     const cached = await cacheService.get<any>(cacheKey);
     if (cached) {
@@ -112,7 +105,6 @@ export const getClassById = asyncHandler(async (req: Request, res: Response) => 
     if (!classDoc || !classDoc.isActive) {
         return errorResponse(res, 404, 'Not Found', 'Class not found');
     }
-    // Get upcoming instances
     const instances = await ClassInstance.find({
         class: classDoc._id,
         date: { $gte: new Date() },
@@ -139,14 +131,12 @@ export const getCalendar = asyncHandler(async (req: Request, res: Response) => {
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
 
-    // Try cache
     const cacheKey = `${CACHE_KEYS.CALENDAR(startDate as string, endDate as string)}:${page}`;
     const cached = await cacheService.get<any>(cacheKey);
     if (cached) {
         return successResponse(res, 200, 'Calendar Fetched', 'Loaded from cache', cached.data, cached.pagination);
     }
 
-    // Aggregation pipeline for calendar data
     const pipeline: any[] = [
         {
             $match: {
@@ -210,12 +200,10 @@ export const getCalendar = asyncHandler(async (req: Request, res: Response) => {
         { $sort: { date: 1, startTime: 1 } },
     ];
 
-    // Get total count
     const countPipeline = [...pipeline, { $count: 'total' }];
     const countResult = await ClassInstance.aggregate(countPipeline);
     const total = countResult[0]?.total || 0;
 
-    // Add pagination
     pipeline.push({ $skip: skip }, { $limit: limit });
 
     const instances = await ClassInstance.aggregate(pipeline);
@@ -235,7 +223,6 @@ export const updateClass = asyncHandler(async (req: Request, res: Response) => {
         return errorResponse(res, 404, 'Not Found', 'Class not found');
     }
 
-    // Update fields
     if (title) classDoc.title = title;
     if (description !== undefined) classDoc.description = description;
     if (instructor) {
@@ -256,7 +243,6 @@ export const updateClass = asyncHandler(async (req: Request, res: Response) => {
     classDoc.updatedAt = new Date();
     await classDoc.save();
 
-    // Regenerate instances if instructor or room changed
     if (instructor || roomType) {
         await recurrenceService.regenerateInstances(classDoc);
     }
@@ -275,12 +261,9 @@ export const deleteClass = asyncHandler(async (req: Request, res: Response) => {
         return errorResponse(res, 404, 'Not Found', 'Class not found');
     }
 
-    // Soft delete the class
     classDoc.isActive = false;
     classDoc.updatedAt = new Date();
     await classDoc.save();
-
-    // Delete all future instances
     await ClassInstance.deleteMany({
         class: classDoc._id,
         date: { $gte: new Date() }
