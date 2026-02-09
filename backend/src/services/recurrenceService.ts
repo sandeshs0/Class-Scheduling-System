@@ -121,18 +121,45 @@ class RecurrenceService {
 
         if (monthDays.length === 0) return dates;
 
-        let current = new Date(start);
+        let currentMonth = new Date(start);
+        // Normalize to start of month to ensure we catch all days in the starting month if applicable
+        // But we must respect start date.
+        // Better: iterate months, generate candidates, filter by >= start.
+
+        // Let's align currentMonth to the month of start date.
+        currentMonth.setDate(1);
+
         let count = 0;
 
-        while (current <= end && count < maxOccurrences) {
-            const dayOfMonth = current.getDate();
+        while (currentMonth <= end && count < maxOccurrences) {
+            // Sort days to ensure chronological order
+            monthDays.sort((a, b) => a - b);
 
-            if (monthDays.includes(dayOfMonth)) {
-                dates.push(new Date(current));
-                count++;
+            for (const day of monthDays) {
+                // Construct date for this month
+                const candidate = new Date(currentMonth);
+                candidate.setDate(day);
+
+                // Keep time from start date
+                candidate.setHours(start.getHours(), start.getMinutes(), start.getSeconds(), start.getMilliseconds());
+
+                // Check 1: Is the day valid for this month? (e.g. Feb 30)
+                // If we set Feb 30, it rolls over to Mar 1 or 2. 
+                // We check if month changed.
+                if (candidate.getMonth() !== currentMonth.getMonth()) {
+                    continue; // Skip invalid days (e.g. Feb 31st)
+                }
+
+                // Check 2: Is it within range?
+                if (candidate >= start && candidate <= end) {
+                    dates.push(candidate);
+                    count++;
+                    if (count >= maxOccurrences) break;
+                }
             }
 
-            current = this.addDays(current, 1);
+            // Move to next month
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
         }
 
         return dates;
@@ -149,7 +176,7 @@ class RecurrenceService {
         if (!customPattern || !customPattern.weekDays || customPattern.weekDays.length === 0) return dates;
 
         const weekDays = customPattern.weekDays;
-        const interval = customPattern.interval || 1; 
+        const interval = customPattern.interval || 1;
 
         let current = new Date(start);
         let weekStart = this.getWeekStart(current);
@@ -181,7 +208,7 @@ class RecurrenceService {
         await ClassInstance.deleteMany({ class: new mongoose.Types.ObjectId(classId.toString()) });
     }
 
-   
+
     async regenerateInstances(classDoc: IClass): Promise<IClassInstance[]> {
         await this.deleteInstancesForClass(classDoc._id as mongoose.Types.ObjectId);
         return this.generateInstances(classDoc);

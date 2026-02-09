@@ -190,11 +190,20 @@ export default function Classes() {
                         break;
                     case 'monthly':
                         endDate.setMonth(endDate.getMonth() + recurrenceDuration);
-                        endDate.setDate(endDate.getDate() - 1);
+                        // Add buffer for end of month cases (e.g. looking for 31st)
+                        endDate.setDate(endDate.getDate() + 7);
                         break;
                     case 'custom':
-                        endDate.setDate(endDate.getDate() + (recurrenceDuration * customInterval * 7) - 1);
+                        // occurrences * interval * 7 days
+                        endDate.setDate(endDate.getDate() + (recurrenceDuration * customInterval * 7) + 7);
                         break;
+                }
+
+                let totalOccurrences = recurrenceDuration;
+                if (recurrenceType === 'weekly' && selectedWeekDays.length > 0) {
+                    totalOccurrences = recurrenceDuration * selectedWeekDays.length;
+                } else if (recurrenceType === 'monthly' && selectedMonthDays.length > 0) {
+                    totalOccurrences = recurrenceDuration * selectedMonthDays.length;
                 }
 
                 submitData.recurrence = {
@@ -204,7 +213,7 @@ export default function Classes() {
                     monthDays: recurrenceType === 'monthly' ? selectedMonthDays : undefined,
                     startDate: formData.scheduledDate || '',
                     endDate: format(endDate, 'yyyy-MM-dd'),
-                    occurrences: recurrenceDuration,
+                    occurrences: totalOccurrences,
                     customPattern: recurrenceType === 'custom' ? {
                         weekDays: selectedWeekDays,
                         interval: customInterval
