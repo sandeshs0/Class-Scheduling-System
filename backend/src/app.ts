@@ -4,6 +4,9 @@ import dotenv from "dotenv";
 import errorHandler from "./middlewares/errorHandler";
 import connectDB from "./config/dbConfig";
 import redisClient from "./config/redisConfig";
+import roomTypeRoutes from './routes/roomTypeRoutes';
+import instructorRoutes from './routes/instructorRoutes';
+import classRoutes from "./routes/classRoutes";
 
 
 dotenv.config();
@@ -24,6 +27,10 @@ app.get('/', (req, res) => {
     res.send('Class Scheduling System APIs!');
 });
 
+// Routes
+app.use('/api/room-types', roomTypeRoutes);
+app.use('/api/instructors', instructorRoutes);
+app.use('/api/classes', classRoutes);
 
 app.use(errorHandler);
 
