@@ -54,7 +54,12 @@ export default function Classes() {
 
     const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('none');
     const [selectedWeekDays, setSelectedWeekDays] = useState<number[]>([]);
+    const [selectedMonthDays, setSelectedMonthDays] = useState<number[]>([]);
     const [recurrenceDuration, setRecurrenceDuration] = useState<number>(4);
+    const [customInterval, setCustomInterval] = useState<number>(1);
+    const [timeSlots, setTimeSlots] = useState<{ startTime: string; endTime: string }[]>([
+        { startTime: '', endTime: '' }
+    ]);
 
     // Get duration label based on recurrence type
     const getDurationLabel = () => {
@@ -62,6 +67,7 @@ export default function Classes() {
             case 'daily': return 'Number of Days';
             case 'weekly': return 'Number of Weeks';
             case 'monthly': return 'Number of Months';
+            case 'custom': return 'Number of Occurrences';
             default: return 'Duration';
         }
     };
@@ -120,12 +126,21 @@ export default function Classes() {
 
             if (classItem.isRecurring && classItem.recurrence) {
                 setRecurrenceType(classItem.recurrence.type);
-                setSelectedWeekDays(classItem.recurrence.weekDays || []);
+                setSelectedWeekDays(classItem.recurrence.weekDays || classItem.recurrence.customPattern?.weekDays || []);
+                setSelectedMonthDays(classItem.recurrence.monthDays || []);
                 setRecurrenceDuration(classItem.recurrence.occurrences || 4);
+                setCustomInterval(classItem.recurrence.customPattern?.interval || 1);
+                setTimeSlots(classItem.recurrence.timeSlots && classItem.recurrence.timeSlots.length > 0
+                    ? classItem.recurrence.timeSlots
+                    : [{ startTime: '', endTime: '' }]
+                );
             } else {
                 setRecurrenceType('none');
                 setSelectedWeekDays([]);
+                setSelectedMonthDays([]);
                 setRecurrenceDuration(4);
+                setCustomInterval(1);
+                setTimeSlots([{ startTime: '', endTime: '' }]);
             }
         } else {
             setEditingClass(null);
@@ -142,7 +157,10 @@ export default function Classes() {
             });
             setRecurrenceType('none');
             setSelectedWeekDays([]);
+            setSelectedMonthDays([]);
             setRecurrenceDuration(4);
+            setCustomInterval(1);
+            setTimeSlots([{ startTime: '', endTime: '' }]);
         }
         setIsModalOpen(true);
     };
@@ -179,15 +197,24 @@ export default function Classes() {
                         endDate.setMonth(endDate.getMonth() + recurrenceDuration);
                         endDate.setDate(endDate.getDate() - 1);
                         break;
+                    case 'custom':
+                        // occurrences * interval * 7 days
+                        endDate.setDate(endDate.getDate() + (recurrenceDuration * customInterval * 7) - 1);
+                        break;
                 }
 
                 submitData.recurrence = {
                     type: recurrenceType,
-                    timeSlots: [{ startTime: formData.startTime || '', endTime: formData.endTime || '' }],
+                    timeSlots: timeSlots,
                     weekDays: selectedWeekDays,
+                    monthDays: recurrenceType === 'monthly' ? selectedMonthDays : undefined,
                     startDate: formData.scheduledDate || '',
                     endDate: format(endDate, 'yyyy-MM-dd'),
                     occurrences: recurrenceDuration,
+                    customPattern: recurrenceType === 'custom' ? {
+                        weekDays: selectedWeekDays,
+                        interval: customInterval
+                    } : undefined
                 };
             } else {
                 submitData.scheduledDate = formData.scheduledDate;
@@ -231,6 +258,28 @@ export default function Classes() {
         setSelectedWeekDays((prev) =>
             prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
         );
+    };
+
+    const toggleMonthDay = (day: number) => {
+        setSelectedMonthDays((prev) =>
+            prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+        );
+    };
+
+    const handleTimeSlotChange = (index: number, field: 'startTime' | 'endTime', value: string) => {
+        const newSlots = [...timeSlots];
+        newSlots[index][field] = value;
+        setTimeSlots(newSlots);
+    };
+
+    const addTimeSlot = () => {
+        setTimeSlots([...timeSlots, { startTime: '', endTime: '' }]);
+    };
+
+    const removeTimeSlot = (index: number) => {
+        if (timeSlots.length > 1) {
+            setTimeSlots(timeSlots.filter((_, i) => i !== index));
+        }
     };
 
     // Get instructor/room type name
@@ -422,7 +471,7 @@ export default function Classes() {
                         onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
                     />
 
-                    {recurrenceType === 'weekly' && (
+                    {(recurrenceType === 'weekly' || recurrenceType === 'custom') && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Select Days
@@ -445,6 +494,42 @@ export default function Classes() {
                         </div>
                     )}
 
+                    {recurrenceType === 'monthly' && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                                Select Days of Month
+                            </label>
+                            <div className="grid grid-cols-7 gap-2">
+                                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                                    <button
+                                        key={day}
+                                        type="button"
+                                        onClick={() => toggleMonthDay(day)}
+                                        className={`p-2 rounded text-xs font-medium transition-colors ${selectedMonthDays.includes(day)
+                                            ? 'bg-indigo-600 text-white'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            }`}
+                                    >
+                                        {day}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">Select dates for recurrence (e.g., 5th and 20th)</p>
+                        </div>
+                    )}
+
+                    {recurrenceType === 'custom' && (
+                        <Input
+                            label="Repeat Every (Weeks)"
+                            type="number"
+                            min={1}
+                            max={52}
+                            value={customInterval}
+                            onChange={(e) => setCustomInterval(parseInt(e.target.value) || 1)}
+                            required
+                        />
+                    )}
+
                     {recurrenceType !== 'none' && (
                         <Input
                             label={getDurationLabel()}
@@ -458,7 +543,7 @@ export default function Classes() {
                         />
                     )}
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                         <Input
                             label={recurrenceType !== 'none' ? 'Start Date' : 'Date'}
                             type="date"
@@ -466,20 +551,66 @@ export default function Classes() {
                             onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
                             required
                         />
-                        <Input
-                            label="Start Time"
-                            type="time"
-                            value={formData.startTime}
-                            onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                            required
-                        />
-                        <Input
-                            label="End Time"
-                            type="time"
-                            value={formData.endTime}
-                            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                            required
-                        />
+
+                        {recurrenceType === 'none' ? (
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input
+                                    label="Start Time"
+                                    type="time"
+                                    value={formData.startTime}
+                                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                                    required
+                                />
+                                <Input
+                                    label="End Time"
+                                    type="time"
+                                    value={formData.endTime}
+                                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Time Slots
+                                </label>
+                                {timeSlots.map((slot, index) => (
+                                    <div key={index} className="flex gap-3 items-end">
+                                        <Input
+                                            label={index === 0 ? "Start Time" : ""}
+                                            type="time"
+                                            value={slot.startTime}
+                                            onChange={(e) => handleTimeSlotChange(index, 'startTime', e.target.value)}
+                                            required
+                                        />
+                                        <Input
+                                            label={index === 0 ? "End Time" : ""}
+                                            type="time"
+                                            value={slot.endTime}
+                                            onChange={(e) => handleTimeSlotChange(index, 'endTime', e.target.value)}
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeTimeSlot(index)}
+                                            className="p-2 mb-[2px] text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                            title="Remove slot"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                ))}
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={addTimeSlot}
+                                    className="w-full mt-2"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Time Slot
+                                </Button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex gap-3 pt-4">
