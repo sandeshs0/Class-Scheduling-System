@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { Calendar, CalendarDays, Clock, Pencil, Plus, Repeat, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useSearchParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -20,6 +21,7 @@ const WEEK_DAYS = [
     { value: 6, label: 'Saturday' },
 ];
 
+
 const RECURRENCE_TYPES = [
     { value: 'none', label: 'One-time' },
     { value: 'daily', label: 'Daily' },
@@ -28,6 +30,7 @@ const RECURRENCE_TYPES = [
 ];
 
 export default function Classes() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [classes, setClasses] = useState<Class[]>([]);
     const [instructors, setInstructors] = useState<Instructor[]>([]);
     const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
@@ -85,7 +88,12 @@ export default function Classes() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+        if (searchParams.get('action') === 'create') {
+            openModal();
+            // Clear the param so it doesn't reopen on refresh, but keep it clean
+            setSearchParams({});
+        }
+    }, [searchParams]);
 
     // Open modal for create/edit
     const openModal = (classItem?: Class) => {

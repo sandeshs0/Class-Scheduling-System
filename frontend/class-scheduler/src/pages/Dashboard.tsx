@@ -1,36 +1,49 @@
-import {
-    addDays,
-    addMonths,
-    endOfMonth,
-    endOfWeek,
-    format,
-    isSameDay,
-    isSameMonth,
-    isToday,
-    startOfMonth,
-    startOfWeek,
-    subMonths,
-} from 'date-fns';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { addDays, addMonths, addWeeks, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subDays, subMonths, subWeeks } from 'date-fns';
+import { Calendar as CalendarIcon, LayoutList, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Views, type View } from 'react-big-calendar';
+import { useNavigate } from 'react-router-dom';
+import Calendar from '../components/calendar/Calendar';
+import ClassList from '../components/calendar/ClassList';
+import ScheduleToolbar from '../components/calendar/ScheduleToolbar';
 import Header from '../components/layout/Header';
 import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
 import { classService } from '../services';
+import type { ClassInstance } from '../types';
 
 export default function Dashboard() {
+    const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [instances, setInstances] = useState<any[]>([]); // Using any[] because backend returns partial objects
+    const [instances, setInstances] = useState<ClassInstance[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [view, setView] = useState<View>(Views.MONTH);
+    const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+    const [selectedEvent, setSelectedEvent] = useState<ClassInstance | null>(null);
 
-    // Fetch classes for current month
-    const fetchClasses = async () => {
+    // Fetch calendar data
+    const fetchCalendarData = async (date: Date, currentView: View) => {
         try {
             setIsLoading(true);
-            const start = format(startOfMonth(currentDate), 'yyyy-MM-dd');
-            const end = format(endOfMonth(currentDate), 'yyyy-MM-dd');
+            let start: Date, end: Date;
 
-            const data = await classService.getCalendar(start, end);
+            // Determine range based on view
+            if (currentView === Views.MONTH) {
+                start = startOfWeek(startOfMonth(date));
+                end = endOfWeek(endOfMonth(date));
+            } else if (currentView === Views.WEEK) {
+                start = startOfWeek(date);
+                end = endOfWeek(date);
+            } else {
+                // Day or Agenda
+                start = startOfWeek(date); // Fetch week context usually safe
+                end = endOfWeek(date);
+            }
+
+            const startDate = format(start, 'yyyy-MM-dd');
+            const endDate = format(end, 'yyyy-MM-dd');
+
+            const data = await classService.getCalendar(startDate, endDate);
             setInstances(data);
         } catch (error) {
             console.error('Failed to fetch calendar:', error);
@@ -40,226 +53,199 @@ export default function Dashboard() {
     };
 
     useEffect(() => {
-        fetchClasses();
-    }, [currentDate]); // Re-fetch when month changes
+        fetchCalendarData(currentDate, view);
+    }, [currentDate, view]);
 
-    // Navigate months
-    const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-    const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-    const goToToday = () => setCurrentDate(new Date());
+    const handleRangeChange = (_range: Date[] | { start: Date; end: Date }) => {
+        // Handled by useEffect on date/view change
+    };
 
-    // Generate calendar days
-    const generateCalendarDays = () => {
-        const monthStart = startOfMonth(currentDate);
-        const monthEnd = endOfMonth(currentDate);
-        const calendarStart = startOfWeek(monthStart);
-        const calendarEnd = endOfWeek(monthEnd);
+    const handleCalendarNavigate = (newDate: Date) => {
+        setCurrentDate(newDate);
+    };
 
-        const days: Date[] = [];
-        let day = calendarStart;
-
-        while (day <= calendarEnd) {
-            days.push(day);
-            day = addDays(day, 1);
+    const handleToolbarNavigate = (action: 'PREV' | 'NEXT' | 'TODAY') => {
+        if (action === 'TODAY') {
+            setCurrentDate(new Date());
+            return;
         }
 
-        return days;
+        switch (view) {
+            case Views.MONTH:
+                setCurrentDate(prev => action === 'NEXT' ? addMonths(prev, 1) : subMonths(prev, 1));
+                break;
+            case Views.WEEK:
+                setCurrentDate(prev => action === 'NEXT' ? addWeeks(prev, 1) : subWeeks(prev, 1));
+                break;
+            case Views.DAY:
+                setCurrentDate(prev => action === 'NEXT' ? addDays(prev, 1) : subDays(prev, 1));
+                break;
+            default:
+                break;
+        }
     };
 
-    // Get classes for a specific day
-    const getClassesForDay = (date: Date): any[] => {
-        return instances.filter((instance) =>
-            isSameDay(new Date(instance.date), date) && !instance.isCancelled
-        );
+    const handleViewChange = (newView: View) => {
+        setView(newView);
     };
 
-    // Get selected date's classes
-    const selectedDateClasses = selectedDate ? getClassesForDay(selectedDate) : [];
-
-    const days = generateCalendarDays();
-    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const handleSelectEvent = (event: ClassInstance) => {
+        setSelectedEvent(event);
+    };
 
     return (
-        <div>
+        <div className="h-[calc(100vh-theme(spacing.6))] flex flex-col p-6 space-y-2">
             <Header
-                title="Dashboard"
-                subtitle="View and manage your class schedule"
+                title="Class Schedule"
+                actions={
+                    <Button onClick={() => navigate('/classes?action=create')}>
+                        <Plus className="w-4 h-4" />
+                        Create Class Schedule
+                    </Button>
+                }
             />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Calendar */}
-                <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-                    {/* Calendar Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-slate-900">
-                            {format(currentDate, 'MMMM yyyy')}
-                        </h2>
-                        <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={goToToday}>
-                                Today
-                            </Button>
-                            <button
-                                onClick={prevMonth}
-                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                            >
-                                <ChevronLeft className="w-5 h-5 text-slate-600" />
-                            </button>
-                            <button
-                                onClick={nextMonth}
-                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                            >
-                                <ChevronRight className="w-5 h-5 text-slate-600" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Week Days Header */}
-                    <div className="grid grid-cols-7 mb-2">
-                        {weekDays.map((day) => (
-                            <div
-                                key={day}
-                                className="text-center text-sm font-semibold text-slate-500 py-2"
-                            >
-                                {day}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Calendar Grid */}
-                    {isLoading ? (
-                        <div className="grid grid-cols-7 gap-1">
-                            {[...Array(35)].map((_, i) => (
-                                <div
-                                    key={i}
-                                    className="aspect-square p-2 bg-slate-50 rounded-lg animate-pulse"
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-7 gap-1">
-                            {days.map((day, index) => {
-                                const dayClasses = getClassesForDay(day);
-                                const isCurrentMonth = isSameMonth(day, currentDate);
-                                const isSelected = selectedDate && isSameDay(day, selectedDate);
-
-                                return (
-                                    <button
-                                        key={index}
-                                        onClick={() => setSelectedDate(day)}
-                                        className={`
-                      aspect-square p-2 rounded-lg text-left transition-all
-                      ${isCurrentMonth ? 'bg-white' : 'bg-slate-50'}
-                      ${isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50' : ''}
-                      ${isToday(day) ? 'border-2 border-indigo-400' : ''}
-                      hover:bg-slate-100
-                    `}
-                                    >
-                                        <span
-                                            className={`
-                        text-sm font-medium
-                        ${isCurrentMonth ? 'text-slate-900' : 'text-slate-400'}
-                        ${isToday(day) ? 'text-indigo-600' : ''}
-                      `}
-                                        >
-                                            {format(day, 'd')}
-                                        </span>
-                                        {dayClasses.length > 0 && (
-                                            <div className="mt-1 space-y-0.5">
-                                                {dayClasses.slice(0, 2).map((instance, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className="text-xs truncate px-1 py-0.5 bg-indigo-100 text-indigo-700 rounded"
-                                                    >
-                                                        {instance.class.title}
-                                                    </div>
-                                                ))}
-                                                {dayClasses.length > 2 && (
-                                                    <div className="text-xs text-slate-500 px-1">
-                                                        +{dayClasses.length - 2} more
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
+            <div className="flex flex-col gap-4">
+                {/* View Mode Toggle */}
+                <div className="flex bg-slate-100 p-1 rounded-lg w-fit border border-slate-200">
+                    <button
+                        onClick={() => setViewMode('calendar')}
+                        className={`
+                            flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all
+                            ${viewMode === 'calendar'
+                                ? 'bg-white text-indigo-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                            }
+                        `}
+                    >
+                        <CalendarIcon className="w-4 h-4" />
+                        Calendar
+                    </button>
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className={`
+                            flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all
+                            ${viewMode === 'list'
+                                ? 'bg-white text-indigo-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                            }
+                        `}
+                    >
+                        <LayoutList className="w-4 h-4" />
+                        List
+                    </button>
                 </div>
 
-                {/* Selected Day Details */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                        {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Select a date'}
-                    </h3>
-
-                    {!selectedDate ? (
-                        <div className="text-center py-8">
-                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <CalendarDays className="w-6 h-6 text-slate-400" />
-                            </div>
-                            <p className="text-slate-500 text-sm">
-                                Click on a date to view classes
-                            </p>
-                        </div>
-                    ) : selectedDateClasses.length === 0 ? (
-                        <div className="text-center py-8">
-                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <CalendarDays className="w-6 h-6 text-slate-400" />
-                            </div>
-                            <p className="text-slate-500 text-sm">
-                                No classes scheduled for this day
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {selectedDateClasses.map((instance) => (
-                                <div
-                                    key={instance._id}
-                                    className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100"
-                                >
-                                    <h4 className="font-semibold text-slate-900 mb-2">
-                                        {instance.class.title}
-                                    </h4>
-                                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                                        <Clock className="w-4 h-4" />
-                                        <span>
-                                            {instance.startTime} - {instance.endTime}
-                                        </span>
-                                    </div>
-                                    {instance.class.description && (
-                                        <p className="text-sm text-slate-500 mt-2 line-clamp-2">
-                                            {instance.class.description}
-                                        </p>
-                                    )}
-                                    <div className="mt-2 text-xs text-slate-500">
-                                        {instance.instructor.name} • {instance.roomType.name}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Quick Stats */}
-                    <div className="mt-6 pt-6 border-t border-slate-200">
-                        <h4 className="text-sm font-semibold text-slate-900 mb-3">This Month</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="p-3 bg-indigo-50 rounded-xl">
-                                <div className="text-2xl font-bold text-indigo-600">
-                                    {instances.length}
-                                </div>
-                                <div className="text-xs text-slate-500">Total Classes</div>
-                            </div>
-                            <div className="p-3 bg-emerald-50 rounded-xl">
-                                <div className="text-2xl font-bold text-emerald-600">
-                                    {instances.length}
-                                </div>
-                                <div className="text-xs text-slate-500">Scheduled</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {/* Shared Toolbar */}
+                <ScheduleToolbar
+                    date={currentDate}
+                    view={view}
+                    onNavigate={handleToolbarNavigate}
+                    onViewChange={handleViewChange}
+                />
             </div>
+
+            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6 relative flex flex-col">
+                {isLoading && (
+                    <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center backdrop-blur-[1px]">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                    </div>
+                )}
+
+                {viewMode === 'calendar' ? (
+                    <Calendar
+                        events={instances}
+                        date={currentDate}
+                        onNavigate={handleCalendarNavigate}
+                        onRangeChange={handleRangeChange}
+                        onSelectEvent={handleSelectEvent}
+                        view={view}
+                        onView={handleViewChange}
+                        toolbar={false}
+                    />
+                ) : (
+                    <div className="flex-1 overflow-auto">
+                        <ClassList
+                            instances={instances}
+                            onSelectEvent={handleSelectEvent}
+                        />
+                    </div>
+                )}
+            </div>
+
+            {/* Event Details Modal */}
+            <Modal
+                isOpen={!!selectedEvent}
+                onClose={() => setSelectedEvent(null)}
+                title="Class Details"
+                size="md"
+            >
+                {selectedEvent && (
+                    <div className="space-y-6">
+                        <div className="border-b border-slate-100 pb-4">
+                            <h3 className="text-xl font-bold text-slate-900">
+                                {typeof selectedEvent.class === 'string' ? 'Class' : selectedEvent.class.title}
+                            </h3>
+                            {typeof selectedEvent.class !== 'string' && selectedEvent.class.description && (
+                                <p className="text-slate-500 mt-1">{selectedEvent.class.description}</p>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 bg-slate-50 rounded-lg">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Time</span>
+                                <div className="mt-1 font-medium text-slate-900 flex items-center gap-2">
+                                    {selectedEvent.startTime} - {selectedEvent.endTime}
+                                </div>
+                            </div>
+                            <div className="p-3 bg-slate-50 rounded-lg">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</span>
+                                <div className="mt-1 font-medium text-slate-900">
+                                    {format(new Date(selectedEvent.date), 'MMM d, yyyy')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+                                    <span className="text-xs font-bold">IN</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-slate-900">
+                                        {typeof selectedEvent.instructor === 'string' ? 'Instructor' : selectedEvent.instructor.name}
+                                    </p>
+                                    <p className="text-xs text-slate-500">Instructor</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                                    <span className="text-xs font-bold">RM</span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-slate-900">
+                                        {typeof selectedEvent.roomType === 'string' ? 'Room' : selectedEvent.roomType.name}
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                        Room Type
+                                        {typeof selectedEvent.roomType !== 'string' && ` • Capacity: ${selectedEvent.roomType.capacity}`}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 flex justify-end">
+                            <button
+                                onClick={() => setSelectedEvent(null)}
+                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 }
